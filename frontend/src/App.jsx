@@ -8,7 +8,7 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState("");
 
-  const API_BASE = "http://127.0.0.1:8000";
+  const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
 
   useEffect(() => {
     if (!copied) return;
@@ -30,7 +30,13 @@ export default function App() {
       });
       if (!res.ok) throw new Error((await res.text()) || "Transcription failed");
       const data = await res.json();
-      setResult({ transcript: data.transcript, subtitles: data.subtitles, meta: data.meta });
+      setResult({
+        transcript: data.transcript,
+        subtitles: data.subtitles,
+        meta: data.meta,
+        vtt: data.vtt,
+        originalUrl: url.trim(),
+      });
     } catch (e) {
       setError(e.message || "Failed to transcribe.");
     } finally { setLoading(false); }
@@ -166,15 +172,51 @@ export default function App() {
               <div className="glass p-6 flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold">SRT Output</h2>
-                  <button
-                    onClick={() => copyToClipboard(srtContent, "SRT")}
-                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 font-medium text-sm transition"
-                  >Copy</button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => copyToClipboard(srtContent, "SRT")}
+                      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 font-medium text-sm transition"
+                    >Copy</button>
+                    {result?.meta?.cache_key && (
+                      <a
+                        href={`${API_BASE}/api/subtitles.srt?url=${encodeURIComponent(result.originalUrl || '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 font-medium text-sm text-white transition"
+                      >Download SRT</a>
+                    )}
+                  </div>
                 </div>
                 <div className="relative flex-1">
                   <div className="absolute inset-0 pointer-events-none opacity-10" style={{background:"linear-gradient(135deg,rgba(236,72,153,0.35),rgba(59,130,246,0.35))"}} />
                   <pre className="relative mono-block bg-black/40 border border-white/10 rounded-xl p-4 max-h-80 overflow-y-auto text-xs leading-relaxed text-gray-300">
 {srtContent}
+                  </pre>
+                </div>
+              </div>
+              {/* VTT */}
+              <div className="glass p-6 flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">WebVTT</h2>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => copyToClipboard(result?.vtt || "", "VTT")}
+                      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 font-medium text-sm transition"
+                    >Copy</button>
+                    {result?.meta?.cache_key && (
+                      <a
+                        href={`${API_BASE}/api/subtitles.vtt?url=${encodeURIComponent(result.originalUrl || '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 font-medium text-sm text-white transition"
+                      >Download VTT</a>
+                    )}
+                  </div>
+                </div>
+                <div className="relative flex-1">
+                  <div className="absolute inset-0 pointer-events-none opacity-10" style={{background:"linear-gradient(135deg,rgba(59,130,246,0.35),rgba(139,92,246,0.35))"}} />
+                  <pre className="relative mono-block bg-black/40 border border-white/10 rounded-xl p-4 max-h-80 overflow-y-auto text-xs leading-relaxed text-gray-300">
+{result?.vtt || ''}
                   </pre>
                 </div>
               </div>
